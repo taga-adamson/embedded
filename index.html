@@ -1,147 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Flood Monitoring – Campus Roads</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>Flood Monitoring Map</title>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-<style>
+  <style>
     body {
-        background: #111;
-        color: white;
-        font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-        text-align: center;
-    }
-
-    h1 {
-        margin: 10px;
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: Arial, sans-serif;
     }
 
     #map {
-    position: relative;
-    width: 1012px;
-    height: 568px;
-    margin: auto;
-    background-image: url("./EMBED-GUI.png");
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
-    border: 2px solid #444;
-}
+      position: relative;
+      width: 1012px;
+      height: 568px;
+      margin: auto;
+      background: url("EMBED-GUI.png") no-repeat center;
+      background-size: contain;
+    }
 
-
-    .road {
-        position: absolute;
-        opacity: 0.7;
-        border: 2px solid black;
+    .street {
+      position: absolute;
+      opacity: 0.6;
+      border: 2px solid black;
     }
 
     .safe { background: #00ff00; }
     .moderate { background: #ff9900; }
     .extreme {
-        background: red;
-        animation: blink 1s infinite;
+      background: red;
+      animation: blink 0.8s infinite alternate;
     }
 
     @keyframes blink {
-        0% { opacity: 0.9; }
-        50% { opacity: 0.4; }
-        100% { opacity: 0.9; }
+      from { opacity: 0.4; }
+      to   { opacity: 0.9; }
     }
 
     #panel {
-        margin-top: 10px;
-        width: 350px;
-        margin-left: auto;
-        margin-right: auto;
-        background: black;
-        border: 2px solid white;
-        padding: 10px;
+      position: absolute;
+      right: 30px;
+      top: 140px;
+      width: 280px;
+      background: black;
+      border: 2px solid white;
+      padding: 10px;
     }
-
-    .row {
-        margin: 6px 0;
-        font-weight: bold;
-    }
-</style>
+  </style>
 </head>
 
 <body>
 
-<h1>🚦 Flood Monitoring – Campus Roads</h1>
-
 <div id="map">
-    <!-- ROADS -->
-    <div id="zobel" class="road" style="left:280px; top:170px; width:330px; height:25px;"></div>
-    <div id="san_marcelino" class="road" style="left:250px; top:140px; width:25px; height:360px;"></div>
-    <div id="romualdez" class="road" style="left:490px; top:195px; width:25px; height:300px;"></div>
-    <div id="un_ave" class="road" style="left:50px; top:500px; width:550px; height:25px;"></div>
+
+  <!-- ROADS (POSITIONED MANUALLY) -->
+  <div id="zobel" class="street" style="left:280px; top:170px; width:330px; height:25px;"></div>
+  <div id="san_marcelino" class="street" style="left:250px; top:140px; width:25px; height:360px;"></div>
+  <div id="romualdez" class="street" style="left:490px; top:200px; width:25px; height:300px;"></div>
+  <div id="un_ave" class="street" style="left:50px; top:500px; width:550px; height:25px;"></div>
+
+  <!-- WARNING PANEL -->
+  <div id="panel">
+    <b>⚠ STREET WARNINGS</b>
+    <div id="warn-zobel"></div>
+    <div id="warn-san"></div>
+    <div id="warn-rom"></div>
+    <div id="warn-un"></div>
+  </div>
+
 </div>
 
-<div id="panel">
-    <div class="row" id="zobel_txt">Zobel: Waiting...</div>
-    <div class="row" id="san_txt">San Marcelino: Waiting...</div>
-    <div class="row" id="rom_txt">Romualdez: Waiting...</div>
-    <div class="row" id="un_txt">UN Ave: Waiting...</div>
-</div>
+<!-- ✅ FIREBASE + LOGIC -->
+<script type="module">
 
-<script>
-/* ===============================
-   🔥 FIREBASE CONFIG
-================================ */
-const firebaseConfig = {
+  // 🔥 IMPORT FIREBASE SDK
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+  // 🔥 YOUR FIREBASE CONFIG
+  const firebaseConfig = {
     apiKey: "AIzaSyA-D-TEQ9Gq5F35or-DpBqyLUqVvxtqHLA",
-    databaseURL: "https://floodmonitoringsystem-7720f-default-rtdb.asia-southeast1.firebasedatabase.app"
-};
+    authDomain: "floodmonitoringsystem-7720f.firebaseapp.com",
+    databaseURL: "https://floodmonitoringsystem-7720f-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "floodmonitoringsystem-7720f",
+    storageBucket: "floodmonitoringsystem-7720f.firebasestorage.app",
+    messagingSenderId: "666441156096",
+    appId: "1:666441156096:web:7bc9c171b9356729bcfae5"
+  };
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+  // 🔥 INITIALIZE
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
-/* ===============================
-   LOGIC
-================================ */
-function sensorToLevel(val) {
-    if (val < 1000) return "safe";
-    if (val < 2500) return "moderate";
+  // 🔁 SENSOR → LEVEL
+  function level(adc) {
+    if (adc < 1000) return "safe";
+    if (adc < 2500) return "moderate";
     return "extreme";
-}
+  }
 
-function updateRoad(id, textId, val, name) {
-    const level = sensorToLevel(val);
-    const road = document.getElementById(id);
+  function apply(id, lvl, label) {
+    const el = document.getElementById(id);
+    el.className = "street " + lvl;
 
-    road.className = "road " + level;
+    document.getElementById("warn-" + id.replace("_ave","").replace("_",""))
+      .innerText =
+        lvl === "extreme" ? `⛔ EXTREME – ${label}` :
+        lvl === "moderate" ? `⚠ MODERATE – ${label}` :
+        `✔ PASSABLE – ${label}`;
+  }
 
-    const labels = {
-        safe: "✔ PASSABLE",
-        moderate: "⚠ MODERATE FLOOD",
-        extreme: "⛔ EXTREME FLOOD"
-    };
-
-    document.getElementById(textId).innerHTML =
-        `${name}: ${labels[level]} <span style="color:#aaa">(${val})</span>`;
-}
-
-/* ===============================
-   LISTENER
-================================ */
-db.ref("water_level").on("value", snap => {
+  // 🔴 REALTIME LISTENER
+  onValue(ref(db, "water_level"), snap => {
     const d = snap.val();
     if (!d) return;
 
-    updateRoad("zobel", "zobel_txt", d.zobel.adc_value, "Zobel");
-    updateRoad("san_marcelino", "san_txt", d.san_marcelino.adc_value, "San Marcelino");
-    updateRoad("romualdez", "rom_txt", d.romualdez.adc_value, "Romualdez");
-    updateRoad("un_ave", "un_txt", d.un_ave.adc_value, "UN Ave");
-});
+    apply("zobel", level(d.zobel.adc_value), "ZOBEL");
+    apply("san_marcelino", level(d.san_marcelino.adc_value), "SAN MARCELINO");
+    apply("romualdez", level(d.romualdez.adc_value), "ROMUALDEZ");
+    apply("un_ave", level(d.un_ave.adc_value), "UN AVE");
+  });
+
 </script>
 
 </body>
 </html>
-
