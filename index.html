@@ -1,54 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Flood Monitoring Map</title>
+<meta charset="UTF-8">
+<title>Flood Monitoring Map</title>
 
-  <style>
-    body {
-      margin: 0;
-      background: #111;
-      color: white;
-      font-family: Arial, sans-serif;
-    }
+<style>
+body {
+  margin: 0;
+  background: #111;
+  color: white;
+  font-family: Arial, sans-serif;
+}
 
-    #map {
-      position: relative;
-      width: 1012px;
-      height: 568px;
-      margin: auto;
-      background: url("EMBED-GUI.png") no-repeat center;
-      background-size: contain;
-    }
+#map {
+  position: relative;
+  width: 1012px;
+  height: 568px;
+  margin: auto;
+  background: url("EMBED-GUI.png") no-repeat center;
+  background-size: contain;
+}
 
-    .street {
-      position: absolute;
-      opacity: 0.6;
-      border: 2px solid black;
-    }
+.street {
+  position: absolute;
+  opacity: 0.6;
+  border: 2px solid black;
+}
 
-    .safe { background: #00ff00; }
-    .moderate { background: #ff9900; }
-    .extreme {
-      background: red;
-      animation: blink 0.8s infinite alternate;
-    }
+.safe { background: #00ff00; }
+.moderate { background: #ff9900; }
+.extreme {
+  background: red;
+  animation: blink 0.8s infinite alternate;
+}
 
-    @keyframes blink {
-      from { opacity: 0.4; }
-      to   { opacity: 0.9; }
-    }
+@keyframes blink {
+  from { opacity: 0.4; }
+  to   { opacity: 0.9; }
+}
 
-    #panel {
-      position: absolute;
-      right: 30px;
-      top: 140px;
-      width: 280px;
-      background: black;
-      border: 2px solid white;
-      padding: 10px;
-    }
-  </style>
+#panel {
+  position: absolute;
+  right: 30px;
+  top: 140px;
+  width: 280px;
+  background: black;
+  border: 2px solid white;
+  padding: 10px;
+}
+</style>
 </head>
 
 <body>
@@ -65,60 +65,58 @@
   <div id="panel">
     <b>⚠ STREET WARNINGS</b>
     <div id="warn-zobel"></div>
-    <div id="warn-san_marcelino"></div>
-    <div id="warn-romualdez"></div>
-    <div id="warn-un_ave"></div>
+    <div id="warn-san"></div>
+    <div id="warn-rom"></div>
+    <div id="warn-un"></div>
   </div>
 
 </div>
 
-<!-- FIREBASE + LOGIC -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyA-D-TEQ9Gq5F35or-DpBqyLUqVvxtqHLA",
-    authDomain: "floodmonitoringsystem-7720f.firebaseapp.com",
-    databaseURL: "https://floodmonitoringsystem-7720f-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "floodmonitoringsystem-7720f",
-    storageBucket: "floodmonitoringsystem-7720f.firebasestorage.app",
-    messagingSenderId: "666441156096",
-    appId: "1:666441156096:web:7bc9c171b9356729bcfae5"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyA-D-TEQ9Gq5F35or-DpBqyLUqVvxtqHLA",
+  authDomain: "floodmonitoringsystem-7720f.firebaseapp.com",
+  databaseURL: "https://floodmonitoringsystem-7720f-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "floodmonitoringsystem-7720f",
+  storageBucket: "floodmonitoringsystem-7720f.firebasestorage.app",
+  messagingSenderId: "666441156096",
+  appId: "1:666441156096:web:7bc9c171b9356729bcfae5"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-  function level(adc) {
-    if (adc < 1000) return "safe";
-    if (adc < 2500) return "moderate";
-    return "extreme";
-  }
+function level(adc) {
+  if (adc < 1000) return "safe";
+  if (adc < 2500) return "moderate";
+  return "extreme";
+}
 
-  function updateStreet(id, adc, label) {
-    const street = document.getElementById(id);
-    const warn = document.getElementById("warn-" + id);
-    if (!street || !warn) return;
+function apply(streetId, warnId, adc, label) {
+  const lvl = level(adc);
 
-    const lvl = level(adc);
-    street.className = "street " + lvl;
+  const street = document.getElementById(streetId);
+  street.className = "street " + lvl;
 
-    warn.innerText =
-      lvl === "extreme" ? `⛔ EXTREME – ${label}` :
-      lvl === "moderate" ? `⚠ MODERATE – ${label}` :
-      `✔ PASSABLE – ${label}`;
-  }
+  const warn = document.getElementById(warnId);
+  warn.innerText =
+    lvl === "extreme" ? `⛔ EXTREME – ${label}` :
+    lvl === "moderate" ? `⚠ MODERATE – ${label}` :
+    `✔ PASSABLE – ${label}`;
+}
 
-  onValue(ref(db, "water_level"), snap => {
-    const d = snap.val();
-    if (!d) return;
+onValue(ref(db, "water_level"), snap => {
+  const d = snap.val();
+  if (!d) return;
 
-    updateStreet("zobel", d.zobel.adc_value, "ZOBEL");
-    updateStreet("san_marcelino", d.san_marcelino.adc_value, "SAN MARCELINO");
-    updateStreet("romualdez", d.romualdez.adc_value, "ROMUALDEZ");
-    updateStreet("un_ave", d.un_ave.adc_value, "UN AVE");
-  });
+  apply("zobel", "warn-zobel", d.zobel.adc_value, "ZOBEL");
+  apply("san_marcelino", "warn-san", d.san_marcelino.adc_value, "SAN MARCELINO");
+  apply("romualdez", "warn-rom", d.romualdez.adc_value, "ROMUALDEZ");
+  apply("un_ave", "warn-un", d.un_ave.adc_value, "UN AVE");
+});
 </script>
 
 </body>
