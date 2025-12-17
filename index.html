@@ -24,14 +24,17 @@
     }
 
     #map {
-        position: relative;
-        width: 1012px;
-        height: 568px;
-        margin: auto;
-        background: url("EMBED-GUI.png") no-repeat center;
-        background-size: cover;
-        border: 2px solid #444;
-    }
+    position: relative;
+    width: 1012px;
+    height: 568px;
+    margin: auto;
+    background-image: url("./EMBED-GUI.png");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    border: 2px solid #444;
+}
+
 
     .road {
         position: absolute;
@@ -141,3 +144,4 @@ db.ref("water_level").on("value", snap => {
 
 </body>
 </html>
+
