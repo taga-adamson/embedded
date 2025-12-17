@@ -55,7 +55,7 @@
 
 <div id="map">
 
-  <!-- ROADS (POSITIONED MANUALLY) -->
+  <!-- ROADS -->
   <div id="zobel" class="street" style="left:280px; top:170px; width:330px; height:25px;"></div>
   <div id="san_marcelino" class="street" style="left:250px; top:140px; width:25px; height:360px;"></div>
   <div id="romualdez" class="street" style="left:490px; top:200px; width:25px; height:300px;"></div>
@@ -65,21 +65,18 @@
   <div id="panel">
     <b>⚠ STREET WARNINGS</b>
     <div id="warn-zobel"></div>
-    <div id="warn-san"></div>
-    <div id="warn-rom"></div>
-    <div id="warn-un"></div>
+    <div id="warn-san_marcelino"></div>
+    <div id="warn-romualdez"></div>
+    <div id="warn-un_ave"></div>
   </div>
 
 </div>
 
-<!-- ✅ FIREBASE + LOGIC -->
+<!-- FIREBASE + LOGIC -->
 <script type="module">
-
-  // 🔥 IMPORT FIREBASE SDK
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
   import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-  // 🔥 YOUR FIREBASE CONFIG
   const firebaseConfig = {
     apiKey: "AIzaSyA-D-TEQ9Gq5F35or-DpBqyLUqVvxtqHLA",
     authDomain: "floodmonitoringsystem-7720f.firebaseapp.com",
@@ -90,39 +87,38 @@
     appId: "1:666441156096:web:7bc9c171b9356729bcfae5"
   };
 
-  // 🔥 INITIALIZE
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  // 🔁 SENSOR → LEVEL
   function level(adc) {
     if (adc < 1000) return "safe";
     if (adc < 2500) return "moderate";
     return "extreme";
   }
 
-  function apply(id, lvl, label) {
-    const el = document.getElementById(id);
-    el.className = "street " + lvl;
+  function updateStreet(id, adc, label) {
+    const street = document.getElementById(id);
+    const warn = document.getElementById("warn-" + id);
+    if (!street || !warn) return;
 
-    document.getElementById("warn-" + id.replace("_ave","").replace("_",""))
-      .innerText =
-        lvl === "extreme" ? `⛔ EXTREME – ${label}` :
-        lvl === "moderate" ? `⚠ MODERATE – ${label}` :
-        `✔ PASSABLE – ${label}`;
+    const lvl = level(adc);
+    street.className = "street " + lvl;
+
+    warn.innerText =
+      lvl === "extreme" ? `⛔ EXTREME – ${label}` :
+      lvl === "moderate" ? `⚠ MODERATE – ${label}` :
+      `✔ PASSABLE – ${label}`;
   }
 
-  // 🔴 REALTIME LISTENER
   onValue(ref(db, "water_level"), snap => {
     const d = snap.val();
     if (!d) return;
 
-    apply("zobel", level(d.zobel.adc_value), "ZOBEL");
-    apply("san_marcelino", level(d.san_marcelino.adc_value), "SAN MARCELINO");
-    apply("romualdez", level(d.romualdez.adc_value), "ROMUALDEZ");
-    apply("un_ave", level(d.un_ave.adc_value), "UN AVE");
+    updateStreet("zobel", d.zobel.adc_value, "ZOBEL");
+    updateStreet("san_marcelino", d.san_marcelino.adc_value, "SAN MARCELINO");
+    updateStreet("romualdez", d.romualdez.adc_value, "ROMUALDEZ");
+    updateStreet("un_ave", d.un_ave.adc_value, "UN AVE");
   });
-
 </script>
 
 </body>
